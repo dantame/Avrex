@@ -27,6 +27,6 @@ defmodule Avrex.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [{:eqc_ex, "~> 1.2.4"}]
   end
 end
