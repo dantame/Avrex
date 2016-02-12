@@ -60,4 +60,14 @@ defmodule DecodeTest do
     {val, _} = Avrex.decode(:boolean, <<0>>)
     assert val == false
   end
+
+  test "should decode an integer array correctly" do
+    {decoded, _} = Avrex.decode({:array, :int}, <<6, 2, 4, 6, 0>>)
+    assert decoded == [1,2,3]
+  end
+
+  test "should decode a string array correctly" do
+    {decoded, _} = Avrex.decode({:array, :string}, <<6, 2, 97, 2, 98, 2, 99, 0>>)
+    assert decoded == ["a", "b", "c"]
+  end
 end

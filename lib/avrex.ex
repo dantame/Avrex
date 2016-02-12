@@ -34,7 +34,23 @@ defmodule Avrex do
 
   def encode(:boolean, false), do: <<0>>
 
+  # ENCODE
+  # COMPLEX TYPES
+
+  def encode({:array, type}, val) when is_list(val) do
+    count = length(val)
+    case count do
+      0 ->
+        <<0>>
+      _ ->
+        binary_count = encode(:long, count)
+        binary_data = Enum.map(val, &(encode(type, &1))) |> Enum.join
+        binary_count <> binary_data <> <<0>>
+    end
+  end
+
   def encode(_, _), do: <<>>
+
 
   # DECODE
   # PRIMITIVE TYPES
@@ -75,6 +91,22 @@ defmodule Avrex do
 
   def decode(:boolean, <<0:: size(7), 1 :: size(1), rest :: binary>>) do
     {true, rest}
+  end
+
+  def decode({:array, type}, val) do
+    {count, buff} = decode(:long, val)
+
+    {decoded, buffer} = decodeN(count, type, buff)
+  end
+
+  def decodeN(0, _, buff) do
+    {[], buff}
+  end
+
+  def decodeN(count, type, buff) do
+    {head, buff1} = decode(type, buff)
+    {tail, buff2} = decodeN(count-1, type, buff1)
+    {[head | tail], buff2}
   end
 
   def decode(_,_), do: <<>>
