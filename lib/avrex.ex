@@ -34,7 +34,27 @@ defmodule Avrex do
 
   def encode(:boolean, false), do: <<0>>
 
+  # ENCODE
+  # COMPLEX TYPES
+
+  def encode({:array, type}, vals) when is_list(vals) do
+    encode_blocks(type, vals, &encode/2)
+  end
+
   def encode(_, _), do: <<>>
+
+  def encode_blocks(type, val, encoder_func) do
+    count = length(val)
+    case count do
+      0 ->
+        <<0>>
+      _ ->
+        binary_count = encode(:long, count)
+        binary_data = for item <- val, do: apply(encoder_func, [type, item])
+        binary_count <> Enum.join(binary_data) <> <<0>>
+    end
+
+  end
 
   # DECODE
   # PRIMITIVE TYPES
@@ -77,7 +97,23 @@ defmodule Avrex do
     {true, rest}
   end
 
+  def decode({:array, type}, val) do
+    {count, buff} = decode(:long, val)
+
+    decode_recursive(count, type, buff)
+  end
+
   def decode(_,_), do: <<>>
+
+  def decode_recursive(0, _, buff) do
+    {[], buff}
+  end
+
+  def decode_recursive(count, type, buff) do
+    {head, buff1} = decode(type, buff)
+    {tail, buff2} = decode_recursive(count-1, type, buff1)
+    {[head | tail], buff2}
+  end
 
   # HELPERS
   # 32 bit variable int encode
