@@ -60,6 +60,20 @@ defmodule EncodeDecodeParityTest do
     end
   end
 
+  property "fixed" do
+    forall val <- binary do
+      {decoded, _} = Avrex.decode(Avrex.encode(val, byte_size(val), :fixed), :fixed)
+      assert val == decoded
+    end
+  end
+
+  property "large fixed" do
+    forall val <- largebinary do
+      {decoded, _} = Avrex.decode(Avrex.encode(val, byte_size(val), :fixed), :fixed)
+      assert val == decoded
+    end
+  end
+
   property "string array" do
     forall val <- list(utf8) do
       {decoded, _} = Avrex.decode(Avrex.encode(val, {:array, :string}), {:array, :string})
