@@ -23,11 +23,11 @@ defmodule Avrex do
   end
 
   def encode(val, :string) when is_binary(val) do
-    encode(byte_size(val), :long) <> val
+    encode(val, :bytes)
   end
 
   def encode(val, :bytes) when is_binary(val) do
-    encode(val, :string)
+    encode(byte_size(val), :long) <> val
   end
 
   def encode(true, :boolean), do: <<1>>
@@ -42,6 +42,12 @@ defmodule Avrex do
   end
 
   def encode(_, _), do: <<>>
+
+  def encode(val, len, :fixed) when is_binary(val) and byte_size(val) === len do
+    encode(val, :bytes)
+  end
+
+  def encode(_, _, _), do: <<>>
 
   def encode_blocks(val, type, encoder_func) do
     count = length(val)
@@ -76,13 +82,13 @@ defmodule Avrex do
   end
 
   def decode(val, :string) do
-    {size, binary} = decode(val, :long)
-    <<str :: binary-size(size), rest :: binary>> = binary
-    {str, rest}
+    decode(val, :bytes)
   end
 
   def decode(val, :bytes) do
-    decode(val, :string)
+    {size, binary} = decode(val, :long)
+    <<str :: binary-size(size), rest :: binary>> = binary
+    {str, rest}
   end
 
   def decode(<<val :: little-float-size(64), rest :: binary>>, :double) do
@@ -95,6 +101,13 @@ defmodule Avrex do
 
   def decode(<<0:: size(7), 1 :: size(1), rest :: binary>>, :boolean) do
     {true, rest}
+  end
+
+  # DECODE
+  # COMPLEX TYPES
+
+  def decode(val, :fixed) do
+    decode(val, :bytes)
   end
 
   def decode(val, {:array, type}) do
