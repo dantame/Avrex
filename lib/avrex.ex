@@ -4,53 +4,53 @@ defmodule Avrex do
   # ENCODE
   # PRIMITIVE TYPES
 
-  def encode(:int, val) do
+  def encode(val, :int) do
     z = (val <<< 1) ^^^ (val >>> 31)
     varint_encode(<<z::size(32)>>)
   end
 
-  def encode(:long, val) do
+  def encode(val, :long) do
     z = (val <<< 1) ^^^ (val >>> 63)
     varint_encode(<<z::size(64)>>)
   end
 
-  def encode(:float, val) when is_float(val) do
+  def encode(val, :float) when is_float(val) do
     <<val :: little-float-size(32)>>
   end
 
-  def encode(:double, val) when is_float(val) do
+  def encode(val, :double) when is_float(val) do
     <<val :: little-float-size(64)>>
   end
 
-  def encode(:string, val) when is_binary(val) do
-    encode(:long, byte_size(val)) <> val
+  def encode(val, :string) when is_binary(val) do
+    encode(byte_size(val), :long) <> val
   end
 
-  def encode(:bytes, val) when is_binary(val) do
-    encode(:string, val)
+  def encode(val, :bytes) when is_binary(val) do
+    encode(val, :string)
   end
 
-  def encode(:boolean, true), do: <<1>>
+  def encode(true, :boolean), do: <<1>>
 
-  def encode(:boolean, false), do: <<0>>
+  def encode(false, :boolean), do: <<0>>
 
   # ENCODE
   # COMPLEX TYPES
 
-  def encode({:array, type}, vals) when is_list(vals) do
-    encode_blocks(type, vals, &encode/2)
+  def encode(vals, {:array, type}) when is_list(vals) do
+    encode_blocks(vals, type, &encode/2)
   end
 
   def encode(_, _), do: <<>>
 
-  def encode_blocks(type, val, encoder_func) do
+  def encode_blocks(val, type, encoder_func) do
     count = length(val)
     case count do
       0 ->
         <<0>>
       _ ->
-        binary_count = encode(:long, count)
-        binary_data = for item <- val, do: apply(encoder_func, [type, item])
+        binary_count = encode(count, :long)
+        binary_data = for item <- val, do: apply(encoder_func, [item, type])
         binary_count <> Enum.join(binary_data) <> <<0>>
     end
 
@@ -59,59 +59,59 @@ defmodule Avrex do
   # DECODE
   # PRIMITIVE TYPES
 
-  def zigzag_decode(:int, val), do: (val >>> 1) ^^^ -(val &&& 1)
+  def zigzag_decode(val, :int), do: (val >>> 1) ^^^ -(val &&& 1)
 
-  def decode(:int, val) do
-    {<<z::size(32)>>, rest} = varint_decode(:int, val)
-    {zigzag_decode(:int, z), rest}
+  def decode(val, :int) do
+    {<<z::size(32)>>, rest} = varint_decode(val, :int)
+    {zigzag_decode(z, :int), rest}
   end
 
-  def decode(:long, val) do
-    {<<z::size(64)>>, rest} = varint_decode(:long, val)
-    {zigzag_decode(:int, z), rest}
+  def decode(val, :long) do
+    {<<z::size(64)>>, rest} = varint_decode(val, :long)
+    {zigzag_decode(z, :int), rest}
   end
 
-  def decode(:float, <<val :: little-float-size(32), rest :: binary>>) do
+  def decode(<<val :: little-float-size(32), rest :: binary>>, :float) do
     {val, rest}
   end
 
-  def decode(:string, val) do
-    {size, binary} = decode(:long, val)
+  def decode(val, :string) do
+    {size, binary} = decode(val, :long)
     <<str :: binary-size(size), rest :: binary>> = binary
     {str, rest}
   end
 
-  def decode(:bytes, val) do
-    decode(:string, val)
+  def decode(val, :bytes) do
+    decode(val, :string)
   end
 
-  def decode(:double, <<val :: little-float-size(64), rest :: binary>>) do
+  def decode(<<val :: little-float-size(64), rest :: binary>>, :double) do
     {val, rest}
   end
 
-  def decode(:boolean, <<0:: size(7), 0 :: size(1), rest :: binary>>) do
+  def decode(<<0:: size(7), 0 :: size(1), rest :: binary>>, :boolean) do
     {false, rest}
   end
 
-  def decode(:boolean, <<0:: size(7), 1 :: size(1), rest :: binary>>) do
+  def decode(<<0:: size(7), 1 :: size(1), rest :: binary>>, :boolean) do
     {true, rest}
   end
 
-  def decode({:array, type}, val) do
-    {count, buff} = decode(:long, val)
+  def decode(val, {:array, type}) do
+    {count, buff} = decode(val, :long)
 
-    decode_recursive(count, type, buff)
+    decode_recursive(count, buff, type)
   end
 
   def decode(_,_), do: <<>>
 
-  def decode_recursive(0, _, buff) do
+  def decode_recursive(0, buff, _) do
     {[], buff}
   end
 
-  def decode_recursive(count, type, buff) do
-    {head, buff1} = decode(type, buff)
-    {tail, buff2} = decode_recursive(count-1, type, buff1)
+  def decode_recursive(count, buff, type) do
+    {head, buff1} = decode(buff, type)
+    {tail, buff2} = decode_recursive(count-1, buff1, type)
     {[head | tail], buff2}
   end
 
@@ -178,15 +178,15 @@ defmodule Avrex do
     <<1::size(1), b10::size(7), 1::size(1), b9::size(7), 1::size(1), b8::size(7), 1::size(1), b7::size(7), 1::size(1), b6::size(7), 1::size(1), b5::size(7), 1::size(1), b4::size(7), 1::size(1), b3::size(7), 1::size(1), b2::size(7), b1>>
   end
 
-  def varint_decode(:int, <<1::size(1), b5::size(7), 1::size(1), b4::size(7), 1::size(1), b3::size(7), 1::size(1), b2::size(7), 0::size(4), b1::size(4), bytes::binary>>) do
+  def varint_decode(<<1::size(1), b5::size(7), 1::size(1), b4::size(7), 1::size(1), b3::size(7), 1::size(1), b2::size(7), 0::size(4), b1::size(4), bytes::binary>>, :int) do
     {<<b1::size(4), b2::size(7), b3::size(7), b4::size(7), b5::size(7)>>, bytes}
   end
 
-  def varint_decode(:long, <<1::size(1), b10::size(7), 1::size(1), b9::size(7), 1::size(1), b8::size(7), 1::size(1), b7::size(7), 1::size(1), b6::size(7), 1::size(1), b5::size(7), 1::size(1), b4::size(7), 1::size(1), b3::size(7), 1::size(1), b2::size(7), 0::size(7), b1::size(1), bytes::binary>>) do
+  def varint_decode(<<1::size(1), b10::size(7), 1::size(1), b9::size(7), 1::size(1), b8::size(7), 1::size(1), b7::size(7), 1::size(1), b6::size(7), 1::size(1), b5::size(7), 1::size(1), b4::size(7), 1::size(1), b3::size(7), 1::size(1), b2::size(7), 0::size(7), b1::size(1), bytes::binary>>, :long) do
     {<<b1::size(1), b2::size(7), b3::size(7), b4::size(7), b5::size(7), b6::size(7), b7::size(7), b8::size(7), b9::size(7), b10::size(7)>>, bytes}
   end
 
-  def varint_decode(type, bytes) do
+  def varint_decode(bytes, type) do
       {dec_bits, rest_bytes} = varint_decode(bytes)
       base = case type do
           :int  -> 32
