@@ -41,11 +41,6 @@ defmodule Avrex do
     encode_blocks(type, vals, &encode/2)
   end
 
-  def encode({:record, _, fields}, vals) when is_list(vals) and is_list(fields) and length(vals) > 0 do
-    encoded_items = for {{_name, type}, val} <- Enum.zip(fields, vals), do: encode(type, val)
-    Enum.join(encoded_items)
-  end
-
   def encode(_, _), do: <<>>
 
   def encode_blocks(type, val, encoder_func) do
@@ -106,16 +101,6 @@ defmodule Avrex do
     {count, buff} = decode(:long, val)
 
     decode_recursive(count, type, buff)
-  end
-
-  def decode({:record, _, fields}, val) do
-    {decoded_list, buffer} = Enum.reduce(fields, {[], val},
-      fn({_name, type}, {decoded, buff}) ->
-        {decoded_item, rest} = decode(type, buff)
-        {[decoded_item | decoded], rest}
-      end)
-
-    {Enum.reverse(decoded_list), buffer}
   end
 
   def decode(_,_), do: <<>>

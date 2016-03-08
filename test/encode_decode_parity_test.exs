@@ -108,21 +108,4 @@ defmodule EncodeDecodeParityTest do
       assert val == decoded
     end
   end
-
-  property "multiple types of field record" do
-    forall val <- non_empty(list(oneof([utf8, real, int, bool]))) do
-      record_types = Enum.map(val, fn(v) ->
-        cond do
-          is_bitstring(v) -> {:something, :string}
-          is_integer(v) -> {:something, :int}
-          is_boolean(v) -> {:something, :boolean}
-          is_float(v) -> {:something, :double}
-        end
-      end)
-
-      encoded = Avrex.encode({:record, :test, record_types}, val)
-      {decoded, _} = Avrex.decode({:record, :test, record_types}, encoded)
-      assert val == decoded
-    end
-  end
 end
