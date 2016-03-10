@@ -43,7 +43,12 @@ defmodule Avrex do
 
   def encode(_, _), do: <<>>
 
-  def encode(val, len, :fixed) when is_binary(val) and byte_size(val) === len do
+  def encode(val, enum_values, :enum) when is_list(enum_values) do
+    index = Enum.find_index(enum_values, &(&1 == val))
+    encode(index, :int)
+  end
+
+  def encode(val, len, :fixed) when is_binary(val) and byte_size(val) == len do
     encode(val, :bytes)
   end
 
@@ -105,6 +110,11 @@ defmodule Avrex do
 
   # DECODE
   # COMPLEX TYPES
+
+  def decode(val, enum_values, :enum) do
+    {index, rest} = decode(val, :int)
+    {Enum.at(enum_values, index), rest}
+  end
 
   def decode(val, :fixed) do
     decode(val, :bytes)

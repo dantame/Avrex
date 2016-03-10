@@ -60,6 +60,24 @@ defmodule EncodeDecodeParityTest do
     end
   end
 
+  property "string enum" do
+    forall val <- list(utf8) do
+      element = "test"
+      list_with_element = Enum.concat(val, [element])
+      {decoded, _} = Avrex.decode(Avrex.encode(element, list_with_element, :enum), list_with_element, :enum)
+      assert element == decoded
+    end
+  end
+
+  property "int enum" do
+    forall val <- list(int) do
+      element = 12345
+      list_with_element = Enum.concat(val, [element])
+      {decoded, _} = Avrex.decode(Avrex.encode(element, list_with_element, :enum), list_with_element, :enum)
+      assert element == decoded
+    end
+  end
+
   property "fixed" do
     forall val <- binary do
       {decoded, _} = Avrex.decode(Avrex.encode(val, byte_size(val), :fixed), :fixed)
